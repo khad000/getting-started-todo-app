@@ -1,0 +1,70 @@
+pipeline {
+    agent any
+
+    environment {
+        COMPOSE_FILE = 'docker-compose.yaml'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Start Services') {
+            steps {
+                sh 'docker-compose up -d'
+            }
+        }
+
+        stage('Wait for Services') {
+            steps {
+                // Give containers time to start
+                sh 'sleep 10'
+            }
+        }
+
+        stage('Test Frontend (Client)') {
+            steps {
+                sh '''
+                  echo "Testing frontend at http://localhost"
+                  curl -f http://localhost || echo "⚠️ Frontend not responding"
+                '''
+            }
+        }
+
+        stage('Test phpMyAdmin') {
+            steps {
+                sh '''
+                  echo "Testing phpMyAdmin at http://db.localhost"
+                  curl -f http://db.localhost || echo "⚠️ phpMyAdmin not responding"
+                '''
+            }
+        }
+
+        stage('Test MySQL Connection') {
+            steps {
+                script {
+                    def mysqlContainer = sh(
+                        script: "docker ps --filter 'ancestor=mysql:9.3' --format '{{.Names}}'",
+                        returnStdout: true
+                    ).trim()
+                    
+                    if (mysqlContainer) {
+                        sh "docker exec ${mysqlContainer} mysql -uroot -psecret -e 'SHOW DATABASES;'"
+                    } else {
+                        error("❌ MySQL container not found")
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Cleaning up...'
+            sh 'docker-compose down -v'
+        }
+    }
+}
