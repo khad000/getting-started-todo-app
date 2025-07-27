@@ -29,7 +29,7 @@ pipeline {
             steps {
                 sh '''
                   echo "Testing frontend at http://localhost"
-                  curl -f http://localhost || echo "⚠️ Frontend not responding"
+                  curl -f http://localhost:9191 || echo "⚠️ Frontend not responding"
                 '''
             }
         }
@@ -38,7 +38,7 @@ pipeline {
             steps {
                 sh '''
                   echo "Testing phpMyAdmin at http://db.localhost"
-                  curl -f http://db.localhost || echo "⚠️ phpMyAdmin not responding"
+                  curl -f http://db.localhost:9191 || echo "⚠️ phpMyAdmin not responding"
                 '''
             }
         }
@@ -52,8 +52,8 @@ pipeline {
                     ).trim()
                     
                     if (mysqlContainer) {
-                        sh "docker exec ${mysqlContainer} mysql -uroot -psecret -e 'SHOW DATABASES;'"
-                    } else {
+                        sh 'docker exec app1-mysql-1 mysql -uroot -psecret -e "SHOW DATABASES;"'
+                   } else {
                         error("❌ MySQL container not found")
                     }
                 }
